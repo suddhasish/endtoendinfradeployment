@@ -317,7 +317,7 @@ go test -v -parallel 4 -timeout 120m
 **Backend initialization fails**
 ```bash
 # Verify backend exists
-az storage account show --name sttfstatedev --resource-group rg-tfstate-dev
+az storage account show --name sttfstatewafdev --resource-group rg-tfstate-dev
 
 # Re-run setup
 ./scripts/setup-backend.sh dev eastus

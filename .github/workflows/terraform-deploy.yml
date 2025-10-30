@@ -182,7 +182,7 @@ jobs:
         run: |
           terraform init \
             -backend-config="resource_group_name=rg-tfstate-${{ matrix.environment }}" \
-            -backend-config="storage_account_name=sttfstate${{ matrix.environment }}" \
+            -backend-config="storage_account_name=sttfstatewaf${{ matrix.environment }}" \
             -backend-config="container_name=tfstate" \
             -backend-config="key=${{ matrix.environment }}.terraform.tfstate"
 
@@ -297,7 +297,7 @@ jobs:
         run: |
           terraform init \
             -backend-config="resource_group_name=rg-tfstate-${{ needs.setup.outputs.environment }}" \
-            -backend-config="storage_account_name=sttfstate${{ needs.setup.outputs.environment }}" \
+            -backend-config="storage_account_name=sttfstatewaf${{ needs.setup.outputs.environment }}" \
             -backend-config="container_name=tfstate" \
             -backend-config="key=${{ needs.setup.outputs.environment }}.terraform.tfstate"
 

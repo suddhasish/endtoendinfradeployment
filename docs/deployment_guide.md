@@ -94,7 +94,7 @@ Run the backend setup script for each environment:
 
 This creates:
 - Resource Group: `rg-tfstate-{env}`
-- Storage Account: `sttfstate{env}`
+- Storage Account: `sttfstatewaf{env}`
 - Container: `tfstate`
 - CanNotDelete lock on the resource group
 
@@ -326,7 +326,7 @@ Error: Failed to get existing workspaces: containers.Client#ListBlobs: Failure r
 **Solution:**
 ```bash
 # Verify backend storage exists
-az storage account show --name sttfstatedev --resource-group rg-tfstate-dev
+az storage account show --name sttfstatewafdev --resource-group rg-tfstate-dev
 
 # Re-run setup script
 ./scripts/setup-backend.sh dev eastus

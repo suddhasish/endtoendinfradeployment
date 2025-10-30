@@ -9,7 +9,7 @@ set -euo pipefail
 ENVIRONMENT="${1:-dev}"
 LOCATION="${2:-eastus}"
 RG_NAME="rg-tfstate-${ENVIRONMENT}"
-SA_NAME="sttfstate${ENVIRONMENT}"
+SA_NAME="sttfstatewaf${ENVIRONMENT}"
 CONTAINER_NAME="tfstate"
 
 echo "================================================"
