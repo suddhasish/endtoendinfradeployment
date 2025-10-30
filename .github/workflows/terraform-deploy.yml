@@ -189,6 +189,10 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: ./environments/${{ matrix.environment }}
+        env:
+          TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids }}
         run: |
           terraform plan \
             -var-file=terraform.tfvars \
@@ -303,6 +307,10 @@ jobs:
 
       - name: Terraform Apply
         working-directory: ./environments/${{ needs.setup.outputs.environment }}
+        env:
+          TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids }}
         run: |
           terraform apply -auto-approve tfplan-${{ needs.setup.outputs.environment }}
 
