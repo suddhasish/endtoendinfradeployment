@@ -1,0 +1,396 @@
+name: Terraform CI/CD - Multi-Environment Deployment
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'release/**'
+    paths:
+      - 'modules/**'
+      - 'environments/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'modules/**'
+      - 'environments/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - qa
+          - stg
+          - prod
+      action:
+        description: 'Terraform action'
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+
+env:
+  TF_VERSION: '1.6.0'
+  TFLINT_VERSION: 'v0.50.0'
+  CHECKOV_VERSION: '3.1.0'
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write
+  id-token: write
+
+jobs:
+  setup:
+    name: Determine Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+      should_deploy: ${{ steps.set-env.outputs.should_deploy }}
+    steps:
+      - name: Determine Environment
+        id: set-env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "environment=prod" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            echo "environment=dev" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/heads/release/* ]]; then
+            echo "environment=stg" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "environment=dev" >> $GITHUB_OUTPUT
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+  security-scan:
+    name: Security & Compliance Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run Checkov
+        id: checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: terraform
+          output_format: cli,sarif
+          output_file_path: console,checkov-results.sarif
+          soft_fail: true
+
+      - name: Upload Checkov results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'checkov-results.sarif'
+
+      - name: Run TFSec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: '.'
+          format: sarif
+          soft_fail: true
+
+  terraform-validate:
+    name: Terraform Validate & Lint
+    runs-on: ubuntu-latest
+    needs: security-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: ${{ env.TFLINT_VERSION }}
+
+      - name: Init TFLint
+        run: tflint --init
+
+      - name: Run TFLint
+        run: tflint --recursive --format compact
+
+      - name: Validate All Environments
+        run: |
+          for env in dev qa stg prod; do
+            echo "Validating $env environment..."
+            cd environments/$env
+            terraform init -backend=false
+            terraform validate
+            cd ../..
+          done
+
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: [setup, terraform-validate]
+    strategy:
+      matrix:
+        environment: [dev, qa, stg, prod]
+    environment: ${{ matrix.environment }}-plan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: ./environments/${{ matrix.environment }}
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=rg-tfstate-${{ matrix.environment }}" \
+            -backend-config="storage_account_name=sttfstate${{ matrix.environment }}" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=${{ matrix.environment }}.terraform.tfstate"
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ./environments/${{ matrix.environment }}
+        run: |
+          terraform plan \
+            -var-file=terraform.tfvars \
+            -out=tfplan-${{ matrix.environment }} \
+            -no-color \
+            | tee plan-output.txt
+        continue-on-error: true
+
+      - name: Generate Plan Summary
+        working-directory: ./environments/${{ matrix.environment }}
+        run: |
+          terraform show -no-color tfplan-${{ matrix.environment }} > tfplan-${{ matrix.environment }}.txt
+
+      - name: Upload Plan Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ matrix.environment }}
+          path: |
+            environments/${{ matrix.environment }}/tfplan-${{ matrix.environment }}
+            environments/${{ matrix.environment }}/tfplan-${{ matrix.environment }}.txt
+          retention-days: 30
+
+      - name: Comment PR with Plan
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const planPath = 'environments/${{ matrix.environment }}/tfplan-${{ matrix.environment }}.txt';
+            if (fs.existsSync(planPath)) {
+              let plan = fs.readFileSync(planPath, 'utf8');
+              if (plan.length > 64000) {
+                plan = plan.substring(0, 64000) + '\n\n... (truncated)';
+              }
+              const output = `#### Terraform Plan - ${{ matrix.environment }} 🌍
+              <details><summary>Show Plan</summary>
+              
+              \`\`\`terraform
+              ${plan}
+              \`\`\`
+              
+              </details>
+              
+              *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: output
+              });
+            }
+
+  terraform-test:
+    name: Run Terratest Integration Tests
+    runs-on: ubuntu-latest
+    needs: terraform-validate
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Run Terratest
+        working-directory: ./tests
+        run: |
+          go mod download
+          go test -v -timeout 45m -parallel 4
+
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: [setup, terraform-plan, terraform-test]
+    if: |
+      (github.event_name == 'push' && needs.setup.outputs.should_deploy == 'true') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
+    environment: 
+      name: ${{ needs.setup.outputs.environment }}
+      url: https://portal.azure.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ needs.setup.outputs.environment }}
+          path: environments/${{ needs.setup.outputs.environment }}/
+
+      - name: Terraform Init
+        working-directory: ./environments/${{ needs.setup.outputs.environment }}
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=rg-tfstate-${{ needs.setup.outputs.environment }}" \
+            -backend-config="storage_account_name=sttfstate${{ needs.setup.outputs.environment }}" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=${{ needs.setup.outputs.environment }}.terraform.tfstate"
+
+      - name: Terraform Apply
+        working-directory: ./environments/${{ needs.setup.outputs.environment }}
+        run: |
+          terraform apply -auto-approve tfplan-${{ needs.setup.outputs.environment }}
+
+      - name: Capture Outputs
+        id: outputs
+        working-directory: ./environments/${{ needs.setup.outputs.environment }}
+        run: |
+          terraform output -json > outputs.json
+          cat outputs.json
+
+      - name: Upload Outputs Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-outputs-${{ needs.setup.outputs.environment }}
+          path: environments/${{ needs.setup.outputs.environment }}/outputs.json
+
+  post-deployment-validation:
+    name: Post-Deployment Validation
+    runs-on: ubuntu-latest
+    needs: [setup, terraform-apply]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Outputs
+        uses: actions/download-artifact@v4
+        with:
+          name: terraform-outputs-${{ needs.setup.outputs.environment }}
+
+      - name: Validate Deployment
+        run: |
+          echo "Validating ${{ needs.setup.outputs.environment }} deployment..."
+          if [ -f outputs.json ]; then
+            echo "Deployment outputs:"
+            cat outputs.json | jq '.'
+            
+            # Extract key values
+            AKS_NAME=$(cat outputs.json | jq -r '.aks_cluster_name.value // empty')
+            APPGW_IP=$(cat outputs.json | jq -r '.appgw_public_ip.value // empty')
+            
+            echo "AKS Cluster: $AKS_NAME"
+            echo "AppGW IP: $APPGW_IP"
+          fi
+
+      - name: Health Check Summary
+        run: |
+          echo "## Deployment Summary for ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Infrastructure deployed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- Environment: ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Timestamp: $(date)" >> $GITHUB_STEP_SUMMARY
+
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [setup, terraform-apply]
+    if: always()
+    steps:
+      - name: Determine Status
+        id: status
+        run: |
+          if [ "${{ needs.terraform-apply.result }}" == "success" ]; then
+            echo "status=✅ Success" >> $GITHUB_OUTPUT
+            echo "color=28a745" >> $GITHUB_OUTPUT
+          else
+            echo "status=❌ Failed" >> $GITHUB_OUTPUT
+            echo "color=dc3545" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Deployment Comment
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const status = '${{ steps.status.outputs.status }}';
+            const env = '${{ needs.setup.outputs.environment }}';
+            const message = `## Deployment ${status}
+            
+            **Environment:** ${env}
+            **Triggered by:** @${{ github.actor }}
+            **Commit:** ${{ github.sha }}
+            **Workflow:** ${{ github.run_id }}
+            `;
+            
+            if (context.payload.pull_request) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: message
+              });
+            }
