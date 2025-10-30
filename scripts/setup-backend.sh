@@ -89,7 +89,7 @@ fi
 echo "Configuring soft delete..."
 az storage blob service-properties delete-policy update \
     --account-name "${SA_NAME}" \
-    --resource-group "${RG_NAME}" \
+    --auth-mode login \
     --enable true \
     --days-retained 30
 
