@@ -203,7 +203,7 @@ resource "azurerm_application_gateway" "this" {
       environment     = var.prefix
       managed_by_agic = "true"
     }
-  }
+  )
 
   lifecycle {
     ignore_changes = [
