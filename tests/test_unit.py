@@ -1,5 +1,5 @@
 """
-Unit tests for Terraform modules - run before apply
+Unit tests for Terraform modules - which run before apply
 These tests validate Terraform syntax and configuration without deploying resources
 """
 import pytest
