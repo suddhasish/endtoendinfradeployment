@@ -46,32 +46,6 @@ resource "azurerm_web_application_firewall_policy" "waf" {
     }
   }
 
-  custom_rules {
-    name      = "RateLimitRule"
-    priority  = 1
-    rule_type = "RateLimitRule"
-    action    = "Block"
-
-    match_conditions {
-      match_variables {
-        variable_name = "RemoteAddr"
-      }
-
-      operator           = "IPMatch"
-      negation_condition = false
-      match_values       = ["0.0.0.0/0"]
-    }
-
-    rate_limit_duration  = "OneMin"
-    rate_limit_threshold = 100
-
-    group_by_user_session {
-      group_by_variables {
-        variable_name = "ClientAddr"
-      }
-    }
-  }
-
   tags = var.tags
 }
 
