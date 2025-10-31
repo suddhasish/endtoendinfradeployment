@@ -46,26 +46,6 @@ resource "azurerm_web_application_firewall_policy" "waf" {
     }
   }
 
-  custom_rules {
-    name      = "RateLimitRule"
-    priority  = 1
-    rule_type = "RateLimitRule"
-    action    = "Block"
-
-    match_conditions {
-      match_variables {
-        variable_name = "RemoteAddr"
-      }
-
-      operator           = "IPMatch"
-      negation_condition = false
-      match_values       = ["0.0.0.0/0"]
-    }
-
-    rate_limit_duration  = "OneMin"
-    rate_limit_threshold = 100
-  }
-
   tags = var.tags
 }
 
@@ -223,7 +203,7 @@ resource "azurerm_application_gateway" "this" {
 
 # Diagnostic Settings
 resource "azurerm_monitor_diagnostic_setting" "appgw" {
-  count                      = var.log_analytics_workspace_id != null ? 1 : 0
+  count                      = length([var.log_analytics_workspace_id]) > 0 ? 1 : 0
   name                       = "diag-${azurerm_application_gateway.this.name}"
   target_resource_id         = azurerm_application_gateway.this.id
   log_analytics_workspace_id = var.log_analytics_workspace_id

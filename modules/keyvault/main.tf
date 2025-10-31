@@ -33,7 +33,7 @@ resource "azurerm_key_vault" "this" {
 
 # Private Endpoint
 resource "azurerm_private_endpoint" "kv" {
-  count               = var.private_endpoint_subnet_id != null ? 1 : 0
+  count               = length([var.private_endpoint_subnet_id]) > 0 ? 1 : 0
   name                = "pe-${azurerm_key_vault.this.name}"
   location            = var.location
   resource_group_name = var.resource_group_name
@@ -132,7 +132,7 @@ resource "azurerm_key_vault_key" "cmk" {
 
 # Diagnostic Settings
 resource "azurerm_monitor_diagnostic_setting" "kv" {
-  count                      = var.log_analytics_workspace_id != null ? 1 : 0
+  count                      = length([var.log_analytics_workspace_id]) > 0 ? 1 : 0
   name                       = "diag-${azurerm_key_vault.this.name}"
   target_resource_id         = azurerm_key_vault.this.id
   log_analytics_workspace_id = var.log_analytics_workspace_id
