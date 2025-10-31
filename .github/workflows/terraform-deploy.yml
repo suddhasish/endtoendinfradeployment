@@ -275,7 +275,6 @@ jobs:
       matrix:
         environment: ${{ needs.setup.outputs.environment == 'all' && fromJSON('["DEV", "QA", "STG", "PROD"]') || fromJSON(format('["{0}"]', needs.setup.outputs.environment)) }}
       max-parallel: ${{ needs.setup.outputs.environment == 'all' && 1 || 4 }}
-    environment: ${{ matrix.environment }}-PLAN
     steps:
       - uses: actions/checkout@v4
 
@@ -355,6 +354,7 @@ jobs:
 
       - name: Comment PR with Plan
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -377,12 +377,20 @@ jobs:
               
               *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
               
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: output
-              });
+              try {
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: output
+                });
+                console.log('✅ Successfully posted plan to PR');
+              } catch (error) {
+                console.log('⚠️ Could not post comment to PR:', error.message);
+                console.log('Plan is available in the artifacts');
+              }
+            } else {
+              console.log('ℹ️ Plan file not found at:', planPath);
             }
 
   terraform-apply:
