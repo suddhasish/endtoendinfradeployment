@@ -1,11 +1,11 @@
 
-variable "prefix" { 
+variable "prefix" {
   type        = string
   description = "Environment prefix"
   default     = "dev"
 }
 
-variable "location" { 
+variable "location" {
   type        = string
   description = "Azure region"
   default     = "eastus"
@@ -29,7 +29,7 @@ variable "random_suffix" {
   default     = "dev01"
 }
 
-variable "aks_node_count" { 
+variable "aks_node_count" {
   type        = number
   description = "Initial AKS node count"
   default     = 2
@@ -53,7 +53,7 @@ variable "sql_administrator_login" {
   default     = "sqladmin"
 }
 
-variable "sql_administrator_password" { 
+variable "sql_administrator_password" {
   type        = string
   description = "SQL administrator password"
   sensitive   = true

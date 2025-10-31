@@ -137,7 +137,13 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Format Check
-        run: terraform fmt -check -recursive
+        id: fmt
+        run: |
+          if ! terraform fmt -check -recursive; then
+            echo "::warning::Terraform files need formatting. Run 'terraform fmt -recursive' locally."
+            terraform fmt -recursive -diff
+            exit 1
+          fi
 
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v4
