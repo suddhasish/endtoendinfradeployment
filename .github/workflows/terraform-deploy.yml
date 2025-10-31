@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - main
+      - master
       - develop
       - 'release/**'
     paths:
@@ -15,6 +16,7 @@ on:
     branches:
       - master
       - main
+      - master
       - develop
     paths:
       - 'modules/**'
