@@ -64,7 +64,7 @@ resource "azurerm_web_application_firewall_policy" "waf" {
 
     rate_limit_duration  = "OneMin"
     rate_limit_threshold = 100
-    
+
     group_by_user_session {
       group_by_variables {
         variable_name = "ClientAddr"
