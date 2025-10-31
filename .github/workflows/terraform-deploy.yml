@@ -3,6 +3,7 @@ name: Terraform CI/CD - Multi-Environment Deployment
 on:
   push:
     branches:
+      - master
       - main
       - develop
       - 'release/**'
@@ -12,6 +13,7 @@ on:
       - '.github/workflows/**'
   pull_request:
     branches:
+      - master
       - main
       - develop
     paths:
