@@ -66,18 +66,62 @@ jobs:
     outputs:
       environment: ${{ steps.set-env.outputs.environment }}
       should_deploy: ${{ steps.set-env.outputs.should_deploy }}
+      allowed_environments: ${{ steps.set-env.outputs.allowed_environments }}
     steps:
       - name: Determine Environment
         id: set-env
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Determine allowed environments based on branch
+            if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+              ALLOWED='["DEV", "QA"]'
+            elif [ "${{ github.ref }}" = "refs/heads/master" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
+              ALLOWED='["STG", "PROD"]'
+            else
+              # Other branches can only plan, not deploy
+              ALLOWED='["DEV", "QA", "STG", "PROD"]'
+            fi
+            
+            echo "allowed_environments=$ALLOWED" >> $GITHUB_OUTPUT
             echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            
+            # Validate selected environment is allowed for this branch
+            SELECTED="${{ github.event.inputs.environment }}"
+            if [ "$SELECTED" != "all" ]; then
+              if [ "${{ github.ref }}" = "refs/heads/develop" ] && [ "$SELECTED" != "DEV" ] && [ "$SELECTED" != "QA" ]; then
+                echo "::error::Branch 'develop' can only deploy to DEV or QA environments"
+                echo "should_deploy=false" >> $GITHUB_OUTPUT
+                exit 1
+              elif ([ "${{ github.ref }}" = "refs/heads/master" ] || [ "${{ github.ref }}" = "refs/heads/main" ]) && [ "$SELECTED" != "STG" ] && [ "$SELECTED" != "PROD" ]; then
+                echo "::error::Branch 'master' can only deploy to STG or PROD environments"
+                echo "should_deploy=false" >> $GITHUB_OUTPUT
+                exit 1
+              fi
+            fi
+            
             echo "should_deploy=true" >> $GITHUB_OUTPUT
           else
             # For PRs and pushes, don't run plan automatically
-            # Use workflow_dispatch to manually select environment and run plan
             echo "environment=SKIP" >> $GITHUB_OUTPUT
             echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "allowed_environments=[]" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Display Branch Rules
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "## Branch Deployment Rules" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📋 **Current Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "🎯 **Selected Environment:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "⚙️ **Action:** ${{ github.event.inputs.action }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            echo "✅ **Allowed Environments:** DEV, QA" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ github.ref }}" = "refs/heads/master" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "✅ **Allowed Environments:** STG, PROD" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Note:** Only plan allowed from this branch" >> $GITHUB_STEP_SUMMARY
           fi
 
   security-scan:
