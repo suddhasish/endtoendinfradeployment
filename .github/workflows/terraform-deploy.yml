@@ -358,16 +358,6 @@ jobs:
             environments/${{ steps.env-path.outputs.path }}/tfplan-${{ steps.env-path.outputs.path }}.txt
           retention-days: 30
 
-      - name: Upload Plan Artifact (Uppercase alias)
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: tfplan-${{ matrix.environment }}
-          path: |
-            environments/${{ steps.env-path.outputs.path }}/tfplan-${{ steps.env-path.outputs.path }}
-            environments/${{ steps.env-path.outputs.path }}/tfplan-${{ steps.env-path.outputs.path }}.txt
-          retention-days: 30
-
       - name: Comment PR with Plan
         if: github.event_name == 'pull_request'
         continue-on-error: true
