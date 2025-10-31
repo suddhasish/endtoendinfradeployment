@@ -412,6 +412,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set Environment Path
+        id: env-path-apply
+        run: |
+          ENV_LOWER=$(echo "${{ needs.setup.outputs.environment }}" | tr '[:upper:]' '[:lower:]')
+          echo "path=$ENV_LOWER" >> $GITHUB_OUTPUT
+          echo "Environment folder: environments/$ENV_LOWER"
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -427,30 +434,30 @@ jobs:
       - name: Download Plan Artifact
         uses: actions/download-artifact@v4
         with:
-          name: tfplan-${{ needs.setup.outputs.environment }}
-          path: environments/${{ needs.setup.outputs.environment }}/
+          name: tfplan-${{ steps.env-path-apply.outputs.path }}
+          path: environments/${{ steps.env-path-apply.outputs.path }}/
 
       - name: Terraform Init
-        working-directory: ./environments/${{ needs.setup.outputs.environment }}
+        working-directory: ./environments/${{ steps.env-path-apply.outputs.path }}
         run: |
           terraform init \
-            -backend-config="resource_group_name=rg-tfstate-${{ needs.setup.outputs.environment }}" \
-            -backend-config="storage_account_name=sttfstatewaf${{ needs.setup.outputs.environment }}" \
+            -backend-config="resource_group_name=rg-tfstate-${{ steps.env-path-apply.outputs.path }}" \
+            -backend-config="storage_account_name=sttfstatewaf${{ steps.env-path-apply.outputs.path }}" \
             -backend-config="container_name=tfstate" \
-            -backend-config="key=${{ needs.setup.outputs.environment }}.terraform.tfstate"
+            -backend-config="key=${{ steps.env-path-apply.outputs.path }}.terraform.tfstate"
 
       - name: Terraform Apply
-        working-directory: ./environments/${{ needs.setup.outputs.environment }}
+        working-directory: ./environments/${{ steps.env-path-apply.outputs.path }}
         env:
           TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
           TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids }}
           TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids }}
         run: |
-          terraform apply -auto-approve tfplan-${{ needs.setup.outputs.environment }}
+          terraform apply -auto-approve tfplan-${{ steps.env-path-apply.outputs.path }}
 
       - name: Capture Outputs
         id: outputs
-        working-directory: ./environments/${{ needs.setup.outputs.environment }}
+        working-directory: ./environments/${{ steps.env-path-apply.outputs.path }}
         run: |
           terraform output -json > outputs.json
           cat outputs.json
@@ -479,7 +486,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: terraform-outputs-${{ needs.setup.outputs.environment }}
-          path: environments/${{ needs.setup.outputs.environment }}/outputs.json
+          path: environments/${{ steps.env-path-apply.outputs.path }}/outputs.json
 
   # Sequential Deployment: DEV -> QA -> STG -> PROD
   apply-dev:
