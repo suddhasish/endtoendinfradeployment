@@ -5,7 +5,6 @@ on:
     branches:
       - master
       - main
-      - master
       - develop
       - 'release/**'
     paths:
@@ -14,7 +13,6 @@ on:
       - '.github/workflows/**'
   pull_request:
     branches:
-      - master
       - main
       - master
       - develop
