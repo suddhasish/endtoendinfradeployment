@@ -1,15 +1,15 @@
 
-variable "name" { 
+variable "name" {
   type        = string
   description = "Storage Account name (must be globally unique)"
 }
 
-variable "location" { 
+variable "location" {
   type        = string
   description = "Azure region"
 }
 
-variable "resource_group_name" { 
+variable "resource_group_name" {
   type        = string
   description = "Resource group name"
 }
@@ -147,7 +147,7 @@ variable "tags" {
 }
 
 # Deprecated - keeping for backward compatibility
-variable "sku" { 
+variable "sku" {
   type        = string
   default     = "Standard_LRS"
   description = "Deprecated - use account_tier and account_replication_type"

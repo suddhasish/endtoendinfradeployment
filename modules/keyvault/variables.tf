@@ -1,15 +1,15 @@
 
-variable "name" { 
+variable "name" {
   type        = string
   description = "Key Vault name"
 }
 
-variable "location" { 
+variable "location" {
   type        = string
   description = "Azure region"
 }
 
-variable "resource_group_name" { 
+variable "resource_group_name" {
   type        = string
   description = "Resource group name"
 }

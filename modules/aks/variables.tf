@@ -1,27 +1,27 @@
 
-variable "prefix" { 
-  type        = string 
+variable "prefix" {
+  type        = string
   description = "Prefix for resource naming"
 }
 
-variable "location" { 
-  type        = string 
+variable "location" {
+  type        = string
   description = "Azure region"
 }
 
-variable "resource_group_name" { 
-  type        = string 
+variable "resource_group_name" {
+  type        = string
   description = "Resource group name"
 }
 
-variable "subnet_id" { 
-  type        = string 
+variable "subnet_id" {
+  type        = string
   description = "Subnet ID for AKS nodes"
 }
 
-variable "node_count" { 
+variable "node_count" {
   type        = number
-  default     = 2 
+  default     = 2
   description = "Initial node count for system node pool"
 }
 

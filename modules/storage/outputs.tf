@@ -4,9 +4,9 @@ output "storage_account_id" {
   value       = azurerm_storage_account.this.id
 }
 
-output "storage_account_name" { 
+output "storage_account_name" {
   description = "Storage Account Name"
-  value       = azurerm_storage_account.this.name 
+  value       = azurerm_storage_account.this.name
 }
 
 output "storage_account_primary_blob_endpoint" {
@@ -19,9 +19,9 @@ output "storage_account_principal_id" {
   value       = azurerm_storage_account.this.identity[0].principal_id
 }
 
-output "tfstate_container" { 
+output "tfstate_container" {
   description = "Tfstate Container Name"
-  value       = azurerm_storage_container.tfstate.name 
+  value       = azurerm_storage_container.tfstate.name
 }
 
 output "private_endpoint_blob_id" {

@@ -124,7 +124,7 @@ resource "azurerm_application_gateway" "this" {
     port                  = 80
     protocol              = "Http"
     request_timeout       = 30
-    
+
     connection_draining {
       enabled           = true
       drain_timeout_sec = 60

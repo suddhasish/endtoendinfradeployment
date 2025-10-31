@@ -208,9 +208,9 @@ resource "azurerm_monitor_diagnostic_setting" "aks" {
 }
 
 
-output "aks_cluster_name" { 
+output "aks_cluster_name" {
   description = "AKS Cluster Name"
-  value       = azurerm_kubernetes_cluster.aks.name 
+  value       = azurerm_kubernetes_cluster.aks.name
 }
 
 output "aks_cluster_id" {
@@ -218,9 +218,9 @@ output "aks_cluster_id" {
   value       = azurerm_kubernetes_cluster.aks.id
 }
 
-output "aks_uai_id" { 
+output "aks_uai_id" {
   description = "AKS User Assigned Identity ID"
-  value       = azurerm_user_assigned_identity.uai.id 
+  value       = azurerm_user_assigned_identity.uai.id
 }
 
 output "aks_kubelet_identity" {

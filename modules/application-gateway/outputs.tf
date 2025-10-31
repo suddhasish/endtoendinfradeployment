@@ -1,7 +1,7 @@
 
-output "appgw_id" { 
+output "appgw_id" {
   description = "Application Gateway ID"
-  value       = azurerm_application_gateway.this.id 
+  value       = azurerm_application_gateway.this.id
 }
 
 output "appgw_name" {
@@ -9,9 +9,9 @@ output "appgw_name" {
   value       = azurerm_application_gateway.this.name
 }
 
-output "appgw_public_ip" { 
+output "appgw_public_ip" {
   description = "Application Gateway Public IP"
-  value       = azurerm_public_ip.pip.ip_address 
+  value       = azurerm_public_ip.pip.ip_address
 }
 
 output "appgw_public_ip_fqdn" {

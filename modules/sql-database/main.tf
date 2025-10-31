@@ -21,7 +21,7 @@ resource "azurerm_mssql_server" "main" {
   version                      = "12.0"
   administrator_login          = var.administrator_login
   administrator_login_password = var.administrator_password != null ? var.administrator_password : random_password.sql_admin.result
-  
+
   minimum_tls_version          = "1.2"
   public_network_access_enabled = false
 
@@ -42,14 +42,14 @@ resource "azurerm_mssql_server" "main" {
 resource "azurerm_mssql_database" "main" {
   name      = var.database_name
   server_id = azurerm_mssql_server.main.id
-  
+
   sku_name                    = var.sku_name
   max_size_gb                 = var.max_size_gb
   zone_redundant              = var.zone_redundant
   read_scale                  = var.read_scale
   geo_backup_enabled          = var.geo_backup_enabled
   storage_account_type        = var.storage_account_type
-  
+
   short_term_retention_policy {
     retention_days = var.short_term_retention_days
   }
@@ -73,7 +73,7 @@ resource "azurerm_mssql_database" "main" {
 # Transparent Data Encryption
 resource "azurerm_mssql_server_transparent_data_encryption" "main" {
   count = var.enable_tde ? 1 : 0
-  
+
   server_id        = azurerm_mssql_server.main.id
   key_vault_key_id = var.tde_key_vault_key_id
 }
@@ -93,7 +93,7 @@ resource "azurerm_mssql_server_security_alert_policy" "main" {
   resource_group_name = var.resource_group_name
   server_name         = azurerm_mssql_server.main.name
   state               = "Enabled"
-  
+
   email_account_admins = true
   email_addresses      = var.security_alert_emails
   retention_days       = 30
@@ -102,7 +102,7 @@ resource "azurerm_mssql_server_security_alert_policy" "main" {
 # Vulnerability Assessment
 resource "azurerm_mssql_server_vulnerability_assessment" "main" {
   count = var.enable_vulnerability_assessment ? 1 : 0
-  
+
   server_security_alert_policy_id = azurerm_mssql_server_security_alert_policy.main.id
   storage_container_path          = var.vulnerability_assessment_storage_path
   storage_account_access_key      = var.audit_storage_access_key
@@ -117,7 +117,7 @@ resource "azurerm_mssql_server_vulnerability_assessment" "main" {
 # Private Endpoint
 resource "azurerm_private_endpoint" "sql" {
   count = var.private_endpoint_subnet_id != null ? 1 : 0
-  
+
   name                = "pe-${azurerm_mssql_server.main.name}"
   location            = var.location
   resource_group_name = var.resource_group_name
@@ -141,7 +141,7 @@ resource "azurerm_private_endpoint" "sql" {
 # Store SQL Admin Password in Key Vault
 resource "azurerm_key_vault_secret" "sql_admin_password" {
   count = var.key_vault_id != null ? 1 : 0
-  
+
   name         = "sql-admin-password-${var.prefix}"
   value        = var.administrator_password != null ? var.administrator_password : random_password.sql_admin.result
   key_vault_id = var.key_vault_id
@@ -152,7 +152,7 @@ resource "azurerm_key_vault_secret" "sql_admin_password" {
 # Diagnostic Settings
 resource "azurerm_monitor_diagnostic_setting" "sql_server" {
   count = var.log_analytics_workspace_id != null ? 1 : 0
-  
+
   name                       = "diag-${azurerm_mssql_server.main.name}"
   target_resource_id         = azurerm_mssql_server.main.id
   log_analytics_workspace_id = var.log_analytics_workspace_id
@@ -173,7 +173,7 @@ resource "azurerm_monitor_diagnostic_setting" "sql_server" {
 
 resource "azurerm_monitor_diagnostic_setting" "sql_database" {
   count = var.log_analytics_workspace_id != null ? 1 : 0
-  
+
   name                       = "diag-${azurerm_mssql_database.main.name}"
   target_resource_id         = azurerm_mssql_database.main.id
   log_analytics_workspace_id = var.log_analytics_workspace_id

@@ -1,15 +1,15 @@
 
-variable "prefix" { 
+variable "prefix" {
   type        = string
   description = "Prefix for resource naming"
 }
 
-variable "resource_group_name" { 
+variable "resource_group_name" {
   type        = string
   description = "Resource group name"
 }
 
-variable "backend_hostname" { 
+variable "backend_hostname" {
   type        = string
   description = "Backend hostname/IP"
 }

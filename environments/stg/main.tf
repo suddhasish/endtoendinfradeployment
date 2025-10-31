@@ -3,7 +3,7 @@ locals {
   spokes = {
     workload = { address_space = ["10.1.0.0/16"] }
   }
-  
+
   common_tags = {
     Environment = "dev"
     ManagedBy   = "Terraform"
@@ -20,7 +20,7 @@ module "monitoring" {
   resource_group_name = module.network.hub_rg_name
   retention_in_days   = 30
   tags                = local.common_tags
-  
+
   depends_on = [module.network]
 }
 
@@ -120,7 +120,7 @@ module "sql" {
   key_vault_id               = module.keyvault.keyvault_id
   log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
   tags                       = local.common_tags
-  
+
   depends_on = [module.keyvault]
 }
 
