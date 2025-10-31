@@ -3,7 +3,6 @@ name: Terraform CI/CD - Multi-Environment Deployment
 on:
   push:
     branches:
-      - master
       - main
       - master
       - develop
