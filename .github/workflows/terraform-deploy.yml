@@ -267,14 +267,16 @@ jobs:
           path: |
             environments/${{ steps.env-path.outputs.path }}/tfplan-${{ steps.env-path.outputs.path }}
             environments/${{ steps.env-path.outputs.path }}/tfplan-${{ steps.env-path.outputs.path }}.txt
-          retention-days: 30      - name: Comment PR with Plan
+          retention-days: 30
+
+      - name: Comment PR with Plan
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const planPath = 'environments/${{ matrix.environment }}/tfplan-${{ matrix.environment }}.txt';
+            const planPath = 'environments/${{ steps.env-path.outputs.path }}/tfplan-${{ steps.env-path.outputs.path }}.txt';
             if (fs.existsSync(planPath)) {
               let plan = fs.readFileSync(planPath, 'utf8');
               if (plan.length > 64000) {
