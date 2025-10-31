@@ -148,10 +148,23 @@ jobs:
         run: tflint --version
 
       - name: Init TFLint
-        run: tflint --init --config=.tflint.hcl
+        run: tflint --init
 
-      - name: Run TFLint
-        run: tflint --recursive --format compact --config=.tflint.hcl
+      - name: Run TFLint on Modules
+        run: |
+          echo "Linting modules..."
+          find modules -type f -name "*.tf" -exec dirname {} \; | sort -u | while read dir; do
+            echo "Checking $dir"
+            tflint --chdir="$dir" --format compact
+          done
+
+      - name: Run TFLint on Environments
+        run: |
+          echo "Linting environments..."
+          for env in dev qa stg prod; do
+            echo "Checking environments/$env"
+            tflint --chdir="environments/$env" --format compact
+          done
 
       - name: Validate All Environments
         run: |
