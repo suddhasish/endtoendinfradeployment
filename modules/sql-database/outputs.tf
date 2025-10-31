@@ -1,9 +1,6 @@
-# modules/sql-database/outputs.tf
+# SQL Database Module Outputs
 
-output "sql_server_name" { value = azurerm_sql_server.sql.name }
-
-output "sql_server_id" {output "sql_db_name" { value = azurerm_sql_database.db.name }
-
+output "sql_server_id" {
   description = "SQL Server ID"
   value       = azurerm_mssql_server.main.id
 }

@@ -1,15 +1,9 @@
-# modules/sql-database/variables.tf
+# SQL Database Module Variables
 
-variable "prefix" { type = string }
-
-variable "prefix" {variable "location" { type = string }
-
-  type        = stringvariable "resource_group_name" { type = string }
-
-  description = "Prefix for resource naming"variable "administrator_login" { type = string, default = "sqladmin" }
-
-}variable "administrator_password" { type = string }
-
+variable "prefix" {
+  type        = string
+  description = "Prefix for resource naming"
+}
 
 variable "location" {
   type        = string
@@ -23,182 +17,177 @@ variable "resource_group_name" {
 
 variable "administrator_login" {
   type        = string
+  description = "SQL Server administrator login"
   default     = "sqladmin"
-  description = "SQL administrator login"
 }
 
 variable "administrator_password" {
   type        = string
-  default     = null
+  description = "SQL Server administrator password (optional, random generated if not provided)"
   sensitive   = true
-  description = "SQL administrator password (if null, random password will be generated)"
+  default     = null
 }
 
 variable "database_name" {
   type        = string
-  default     = "appdb"
-  description = "Database name"
+  description = "SQL Database name"
 }
 
 variable "sku_name" {
   type        = string
-  default     = "S0"
-  description = "Database SKU name"
+  description = "SQL Database SKU"
+  default     = "GP_Gen5_2"
 }
 
 variable "max_size_gb" {
   type        = number
-  default     = 50
-  description = "Maximum database size in GB"
+  description = "Maximum size of the database in GB"
+  default     = 32
 }
 
 variable "zone_redundant" {
   type        = bool
-  default     = false
   description = "Enable zone redundancy"
+  default     = false
+}
+
+variable "read_scale" {
+  type        = bool
+  description = "Enable read scale-out"
+  default     = false
 }
 
 variable "geo_backup_enabled" {
   type        = bool
-  default     = true
   description = "Enable geo-redundant backup"
+  default     = true
 }
 
-variable "backup_storage_redundancy" {
+variable "storage_account_type" {
   type        = string
-  default     = "Local"
-  description = "Backup storage redundancy (Local, Geo, Zone)"
+  description = "Storage account type for backup"
+  default     = "Geo"
+  validation {
+    condition     = contains(["Geo", "Local", "Zone"], var.storage_account_type)
+    error_message = "Storage account type must be Geo, Local, or Zone."
+  }
 }
 
 variable "short_term_retention_days" {
   type        = number
+  description = "Short term retention in days (7-35)"
   default     = 7
-  description = "Short term retention in days"
+  validation {
+    condition     = var.short_term_retention_days >= 7 && var.short_term_retention_days <= 35
+    error_message = "Short term retention days must be between 7 and 35."
+  }
 }
 
 variable "weekly_backup_retention" {
   type        = string
+  description = "Weekly backup retention (e.g., P1W)"
   default     = "P1W"
-  description = "Weekly backup retention"
 }
 
 variable "monthly_backup_retention" {
   type        = string
+  description = "Monthly backup retention (e.g., P1M)"
   default     = "P1M"
-  description = "Monthly backup retention"
 }
 
 variable "yearly_backup_retention" {
   type        = string
+  description = "Yearly backup retention (e.g., P1Y)"
   default     = null
-  description = "Yearly backup retention"
 }
 
-variable "public_network_access_enabled" {
+variable "week_of_year" {
+  type        = number
+  description = "Week of year for yearly backup"
+  default     = 1
+}
+
+variable "enable_tde" {
   type        = bool
-  default     = false
-  description = "Enable public network access"
-}
-
-variable "azuread_admin_login" {
-  type        = string
-  default     = "SQL Administrators"
-  description = "Azure AD admin login name"
-}
-
-variable "azuread_admin_object_id" {
-  type        = string
-  default     = null
-  description = "Azure AD admin object ID"
-}
-
-variable "key_vault_id" {
-  type        = string
-  default     = null
-  description = "Key Vault ID for storing passwords"
+  description = "Enable Transparent Data Encryption"
+  default     = true
 }
 
 variable "tde_key_vault_key_id" {
   type        = string
+  description = "Key Vault Key ID for TDE (optional, uses Microsoft-managed key if not provided)"
   default     = null
-  description = "Key Vault Key ID for TDE"
 }
 
-variable "private_endpoint_subnet_id" {
+variable "azuread_admin_login" {
   type        = string
-  default     = null
-  description = "Subnet ID for private endpoint"
+  description = "Azure AD administrator login name"
+  default     = "sqladmin"
 }
 
-variable "private_dns_zone_ids" {
-  type        = list(string)
-  default     = []
-  description = "Private DNS zone IDs"
-}
-
-variable "log_analytics_workspace_id" {
+variable "azuread_admin_object_id" {
   type        = string
+  description = "Azure AD administrator object ID"
   default     = null
-  description = "Log Analytics Workspace ID"
 }
 
-variable "threat_detection_email_account_admins" {
-  type        = bool
-  default     = true
-  description = "Email account admins on threat detection"
+variable "audit_storage_endpoint" {
+  type        = string
+  description = "Storage endpoint for SQL auditing"
+  default     = null
 }
 
-variable "threat_detection_email_addresses" {
+variable "audit_storage_access_key" {
+  type        = string
+  description = "Storage access key for SQL auditing"
+  sensitive   = true
+  default     = null
+}
+
+variable "security_alert_emails" {
   type        = list(string)
-  default     = []
-  description = "Email addresses for threat detection alerts"
-}
-
-variable "security_alert_email_account_admins" {
-  type        = bool
-  default     = true
-  description = "Email account admins on security alerts"
-}
-
-variable "security_alert_email_addresses" {
-  type        = list(string)
-  default     = []
   description = "Email addresses for security alerts"
+  default     = []
 }
 
 variable "enable_vulnerability_assessment" {
   type        = bool
+  description = "Enable SQL vulnerability assessment"
   default     = false
-  description = "Enable vulnerability assessment"
 }
 
-variable "storage_endpoint" {
+variable "vulnerability_assessment_storage_path" {
   type        = string
+  description = "Storage container path for vulnerability assessment"
   default     = null
-  description = "Storage endpoint for vulnerability assessment"
 }
 
-variable "storage_access_key" {
+variable "private_endpoint_subnet_id" {
   type        = string
+  description = "Subnet ID for private endpoint"
   default     = null
-  sensitive   = true
-  description = "Storage access key for vulnerability assessment"
 }
 
-variable "vulnerability_email_subscription_admins" {
-  type        = bool
-  default     = true
-  description = "Email subscription admins on vulnerability assessment"
-}
-
-variable "vulnerability_assessment_emails" {
+variable "private_dns_zone_ids" {
   type        = list(string)
+  description = "Private DNS zone IDs for private endpoint"
   default     = []
-  description = "Email addresses for vulnerability assessment"
+}
+
+variable "key_vault_id" {
+  type        = string
+  description = "Key Vault ID to store SQL admin password"
+  default     = null
+}
+
+variable "log_analytics_workspace_id" {
+  type        = string
+  description = "Log Analytics workspace ID for diagnostic settings"
+  default     = null
 }
 
 variable "tags" {
   type        = map(string)
+  description = "Resource tags"
   default     = {}
-  description = "Tags for resources"
 }
