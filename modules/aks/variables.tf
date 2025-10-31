@@ -25,12 +25,6 @@ variable "node_count" {
   description = "Initial node count for system node pool"
 }
 
-variable "kubernetes_version" { 
-  type        = string
-  default     = null 
-  description = "Kubernetes version"
-}
-
 variable "vm_size" {
   type        = string
   default     = "Standard_D4s_v3"
