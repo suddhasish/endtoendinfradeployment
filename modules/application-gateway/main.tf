@@ -223,7 +223,7 @@ resource "azurerm_application_gateway" "this" {
 
 # Diagnostic Settings
 resource "azurerm_monitor_diagnostic_setting" "appgw" {
-  count                      = var.log_analytics_workspace_id != null ? 1 : 0
+  count                      = length([var.log_analytics_workspace_id]) > 0 ? 1 : 0
   name                       = "diag-${azurerm_application_gateway.this.name}"
   target_resource_id         = azurerm_application_gateway.this.id
   log_analytics_workspace_id = var.log_analytics_workspace_id
