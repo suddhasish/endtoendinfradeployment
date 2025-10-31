@@ -117,16 +117,16 @@ jobs:
         run: |
           echo "## Branch Deployment Rules" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📋 **Current Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "🎯 **Selected Environment:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
-          echo "⚙️ **Action:** ${{ github.event.inputs.action }}" >> $GITHUB_STEP_SUMMARY
+          echo " **Current Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo " **Selected Environment:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo " **Action:** ${{ github.event.inputs.action }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ "${{ github.ref }}" = "refs/heads/develop" ]; then
-            echo "✅ **Allowed Environments:** DEV, QA" >> $GITHUB_STEP_SUMMARY
+            echo " **Allowed Environments:** DEV, QA" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ github.ref }}" = "refs/heads/master" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "✅ **Allowed Environments:** STG, PROD" >> $GITHUB_STEP_SUMMARY
+            echo " **Allowed Environments:** STG, PROD" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ **Note:** Only plan allowed from this branch" >> $GITHUB_STEP_SUMMARY
+            echo " **Note:** Only plan allowed from this branch" >> $GITHUB_STEP_SUMMARY
           fi
 
   security-scan:
