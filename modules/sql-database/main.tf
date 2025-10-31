@@ -20,7 +20,7 @@ resource "azurerm_mssql_server" "main" {
   location                     = var.location
   version                      = "12.0"
   administrator_login          = var.administrator_login
-  administrator_login_password = var.administrator_password != null ? var.administrator_password : random_password.sql_admin.result
+  administrator_login_password = coalesce(var.administrator_password, random_password.sql_admin.result)
 
   minimum_tls_version           = "1.2"
   public_network_access_enabled = false
@@ -143,7 +143,7 @@ resource "azurerm_key_vault_secret" "sql_admin_password" {
   count = var.key_vault_id != null ? 1 : 0
 
   name         = "sql-admin-password-${var.prefix}"
-  value        = var.administrator_password != null ? var.administrator_password : random_password.sql_admin.result
+  value        = coalesce(var.administrator_password, random_password.sql_admin.result)
   key_vault_id = var.key_vault_id
 
   tags = var.tags
