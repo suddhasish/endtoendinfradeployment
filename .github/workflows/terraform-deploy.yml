@@ -275,10 +275,7 @@ jobs:
     if: needs.setup.outputs.environment != 'SKIP'
     strategy:
       matrix:
-        environment: ${{ 
-          needs.setup.outputs.environment == 'all' && fromJSON('["DEV", "QA", "STG", "PROD"]') ||
-          fromJSON(format('["{0}"]', needs.setup.outputs.environment))
-        }}
+        environment: ${{ needs.setup.outputs.environment == 'all' && fromJSON('["DEV", "QA", "STG", "PROD"]') || fromJSON(format('["{0}"]', needs.setup.outputs.environment)) }}
       max-parallel: ${{ needs.setup.outputs.environment == 'all' && 1 || 4 }}
     environment: ${{ matrix.environment }}-PLAN
     steps:
