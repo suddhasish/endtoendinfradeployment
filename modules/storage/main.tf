@@ -9,7 +9,7 @@ resource "azurerm_storage_account" "this" {
   account_kind                    = var.account_kind
   min_tls_version                 = "TLS1_2"
   allow_nested_items_to_be_public = false
-  enable_https_traffic_only       = true
+  https_traffic_only_enabled      = true
   shared_access_key_enabled       = var.shared_access_key_enabled
   public_network_access_enabled   = var.public_network_access_enabled
   is_hns_enabled                  = var.is_hns_enabled
