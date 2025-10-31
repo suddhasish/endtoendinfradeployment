@@ -1,0 +1,11 @@
+pytest==7.4.3
+python-terraform==0.10.1
+pytest-xdist==3.5.0
+pytest-timeout==2.2.0
+azure-mgmt-resource==23.0.1
+azure-mgmt-network==25.1.0
+azure-mgmt-containerservice==29.0.0
+azure-mgmt-storage==21.1.0
+azure-mgmt-keyvault==10.3.0
+azure-mgmt-sql==4.0.0
+azure-identity==1.15.0
