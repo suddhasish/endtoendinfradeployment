@@ -110,7 +110,7 @@ resource "azurerm_storage_management_policy" "lifecycle" {
 
 # Private Endpoint for Blob
 resource "azurerm_private_endpoint" "blob" {
-  count               = var.private_endpoint_subnet_id != null ? 1 : 0
+  count               = length([var.private_endpoint_subnet_id]) > 0 ? 1 : 0
   name                = "pe-${azurerm_storage_account.this.name}-blob"
   location            = var.location
   resource_group_name = var.resource_group_name
@@ -133,7 +133,7 @@ resource "azurerm_private_endpoint" "blob" {
 
 # Private Endpoint for File
 resource "azurerm_private_endpoint" "file" {
-  count               = var.private_endpoint_subnet_id != null && var.enable_file_share ? 1 : 0
+  count               = (length([var.private_endpoint_subnet_id]) > 0 && var.enable_file_share) ? 1 : 0
   name                = "pe-${azurerm_storage_account.this.name}-file"
   location            = var.location
   resource_group_name = var.resource_group_name
@@ -156,7 +156,7 @@ resource "azurerm_private_endpoint" "file" {
 
 # Diagnostic Settings
 resource "azurerm_monitor_diagnostic_setting" "storage" {
-  count                      = var.log_analytics_workspace_id != null ? 1 : 0
+  count                      = length([var.log_analytics_workspace_id]) > 0 ? 1 : 0
   name                       = "diag-${azurerm_storage_account.this.name}"
   target_resource_id         = "${azurerm_storage_account.this.id}/blobServices/default"
   log_analytics_workspace_id = var.log_analytics_workspace_id
