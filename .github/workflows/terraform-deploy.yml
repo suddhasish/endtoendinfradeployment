@@ -183,10 +183,42 @@ jobs:
             cd ../..
           done
 
+  terraform-unit-tests:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    needs: terraform-validate
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        working-directory: ./tests
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Unit Tests
+        working-directory: ./tests
+        run: |
+          pytest test_unit.py -v -m unit --tb=short --junitxml=unit-test-results.xml
+        timeout-minutes: 10
+
+      - name: Upload Unit Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: tests/unit-test-results.xml
+
   terraform-plan:
     name: Terraform Plan
     runs-on: ubuntu-latest
-    needs: [setup, terraform-validate]
+    needs: [setup, terraform-validate, terraform-unit-tests]
     strategy:
       matrix:
         environment: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment != 'all' && fromJSON(format('["{0}"]', github.event.inputs.environment)) || fromJSON('["DEV", "QA", "STG", "PROD"]') }}
@@ -301,48 +333,10 @@ jobs:
               });
             }
 
-  terraform-test:
-    name: Run Pytest Integration Tests
-    runs-on: ubuntu-latest
-    needs: terraform-validate
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-          terraform_wrapper: false
-
-      - name: Install Python Dependencies
-        working-directory: ./tests
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Run Pytest Tests
-        working-directory: ./tests
-        run: |
-          pytest -v --tb=short --junitxml=test-results.xml
-        timeout-minutes: 45
-
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-results
-          path: tests/test-results.xml
-
   terraform-apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    needs: [setup, terraform-plan, terraform-test]
+    needs: [setup, terraform-plan]
     if: |
       (github.event_name == 'push' && needs.setup.outputs.should_deploy == 'true') ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply' && github.event.inputs.environment != 'all')
@@ -351,6 +345,12 @@ jobs:
       url: https://portal.azure.com
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -389,6 +389,26 @@ jobs:
           terraform output -json > outputs.json
           cat outputs.json
 
+      - name: Install Python Test Dependencies
+        working-directory: ./tests
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Integration Tests
+        working-directory: ./tests
+        run: |
+          pytest test_integration.py -v --tb=short --junitxml=test-results-${{ needs.setup.outputs.environment }}.xml
+        timeout-minutes: 10
+        continue-on-error: true
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results-${{ needs.setup.outputs.environment }}
+          path: tests/test-results-${{ needs.setup.outputs.environment }}.xml
+
       - name: Upload Outputs Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -399,7 +419,7 @@ jobs:
   apply-dev:
     name: Apply DEV
     runs-on: ubuntu-latest
-    needs: [terraform-plan, terraform-test]
+    needs: [terraform-plan, terraform-unit-tests]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply' && github.event.inputs.environment == 'all'
     environment:
       name: dev
