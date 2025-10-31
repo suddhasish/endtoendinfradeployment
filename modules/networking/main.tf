@@ -34,11 +34,11 @@ resource "azurerm_subnet" "appgw" {
 }
 
 resource "azurerm_subnet" "pe" {
-  name                                      = "snet-pe"
-  resource_group_name                       = azurerm_resource_group.hub.name
-  virtual_network_name                      = azurerm_virtual_network.hub.name
-  address_prefixes                          = ["10.0.1.0/24"]
-  private_endpoint_network_policies_enabled = false
+  name                                   = "snet-pe"
+  resource_group_name                    = azurerm_resource_group.hub.name
+  virtual_network_name                   = azurerm_virtual_network.hub.name
+  address_prefixes                       = ["10.0.1.0/24"]
+  private_endpoint_network_policies      = "Disabled"
 }
 
 resource "azurerm_subnet" "bastion" {
@@ -287,12 +287,12 @@ resource "azurerm_subnet" "aks" {
 }
 
 resource "azurerm_subnet" "db" {
-  for_each                                  = azurerm_virtual_network.spoke
-  name                                      = "snet-db"
-  resource_group_name                       = azurerm_resource_group.spoke_rg[each.key].name
-  virtual_network_name                      = each.value.name
-  address_prefixes                          = [cidrsubnet(each.value.address_space[0], 4, 8)]
-  private_endpoint_network_policies_enabled = false
+  for_each                              = azurerm_virtual_network.spoke
+  name                                  = "snet-db"
+  resource_group_name                   = azurerm_resource_group.spoke_rg[each.key].name
+  virtual_network_name                  = each.value.name
+  address_prefixes                      = [cidrsubnet(each.value.address_space[0], 4, 8)]
+  private_endpoint_network_policies     = "Disabled"
 }
 
 # Network Security Groups for Spoke Subnets
