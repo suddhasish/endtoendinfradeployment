@@ -1,4 +1,4 @@
-name: Terraform CI/CD - Multi-Environment Deployment Try1
+name: Terraform CI/CD - Multi-Environment Deployment Try2
 
 on:
   push:
