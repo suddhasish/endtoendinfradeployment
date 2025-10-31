@@ -1,12 +1,12 @@
 
-prefix                    = "prod"
-location                  = "eastus"
-project_name              = "azureapp"
-cost_center               = "IT-Production"
-random_suffix             = "prd01"
-aks_node_count            = 5
-sql_administrator_login   = "sqladmin"
-sql_database_name         = "appdb"
+prefix                  = "prod"
+location                = "eastus"
+project_name            = "azureapp"
+cost_center             = "IT-Production"
+random_suffix           = "prd01"
+aks_node_count          = 5
+sql_administrator_login = "sqladmin"
+sql_database_name       = "appdb"
 
 # Sensitive values must be provided via environment variables (GitHub Secrets):
 # TF_VAR_sql_administrator_password - Set as GitHub Environment Secret

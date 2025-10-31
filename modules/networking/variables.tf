@@ -21,7 +21,7 @@ variable "spokes" {
     address_space = list(string)
   }))
   description = "Map of spoke name to address space"
-  default     = {
+  default = {
     workload = {
       address_space = ["10.1.0.0/16"]
     }

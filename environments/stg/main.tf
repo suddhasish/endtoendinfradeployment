@@ -36,17 +36,17 @@ module "network" {
 
 # Storage for tfstate and other purposes
 module "storage" {
-  source                      = "../../modules/storage"
-  name                        = lower("${var.prefix}tfstateacct${var.random_suffix}")
-  location                    = var.location
-  resource_group_name         = module.network.hub_rg_name
-  account_tier                = "Standard"
-  account_replication_type    = "LRS"
-  private_endpoint_subnet_id  = module.network.pe_subnet_id
-  private_dns_zone_blob_id    = module.network.private_dns_zone_storage_blob_id
-  private_dns_zone_file_id    = module.network.private_dns_zone_storage_file_id
-  log_analytics_workspace_id  = module.monitoring.log_analytics_workspace_id
-  tags                        = local.common_tags
+  source                     = "../../modules/storage"
+  name                       = lower("${var.prefix}tfstateacct${var.random_suffix}")
+  location                   = var.location
+  resource_group_name        = module.network.hub_rg_name
+  account_tier               = "Standard"
+  account_replication_type   = "LRS"
+  private_endpoint_subnet_id = module.network.pe_subnet_id
+  private_dns_zone_blob_id   = module.network.private_dns_zone_storage_blob_id
+  private_dns_zone_file_id   = module.network.private_dns_zone_storage_file_id
+  log_analytics_workspace_id = module.monitoring.log_analytics_workspace_id
+  tags                       = local.common_tags
 }
 
 # Key Vault

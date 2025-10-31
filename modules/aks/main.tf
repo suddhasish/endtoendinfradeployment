@@ -82,12 +82,12 @@ resource "azurerm_kubernetes_cluster" "aks" {
   }
 
   network_profile {
-    network_plugin     = "azure"
-    network_policy     = "azure"
-    dns_service_ip     = var.dns_service_ip
-    service_cidr       = var.service_cidr
-    load_balancer_sku  = "standard"
-    outbound_type      = var.outbound_type
+    network_plugin    = "azure"
+    network_policy    = "azure"
+    dns_service_ip    = var.dns_service_ip
+    service_cidr      = var.service_cidr
+    load_balancer_sku = "standard"
+    outbound_type     = var.outbound_type
   }
 
   oms_agent {

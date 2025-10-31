@@ -17,12 +17,12 @@ resource "random_password" "sql_admin" {
 resource "azurerm_mssql_server" "main" {
   name                         = "${var.prefix}-sql"
   resource_group_name          = var.resource_group_name
-  location                     = var.location
-  version                      = "12.0"
-  administrator_login          = var.administrator_login
-  administrator_login_password = var.administrator_password != null ? var.administrator_password : random_password.sql_admin.result
+  location                      = var.location
+  version                       = "12.0"
+  administrator_login           = var.administrator_login
+  administrator_login_password  = var.administrator_password != null ? var.administrator_password : random_password.sql_admin.result
 
-  minimum_tls_version          = "1.2"
+  minimum_tls_version           = "1.2"
   public_network_access_enabled = false
 
   azuread_administrator {
@@ -43,12 +43,12 @@ resource "azurerm_mssql_database" "main" {
   name      = var.database_name
   server_id = azurerm_mssql_server.main.id
 
-  sku_name                    = var.sku_name
-  max_size_gb                 = var.max_size_gb
-  zone_redundant              = var.zone_redundant
-  read_scale                  = var.read_scale
-  geo_backup_enabled          = var.geo_backup_enabled
-  storage_account_type        = var.storage_account_type
+  sku_name             = var.sku_name
+  max_size_gb          = var.max_size_gb
+  zone_redundant       = var.zone_redundant
+  read_scale           = var.read_scale
+  geo_backup_enabled   = var.geo_backup_enabled
+  storage_account_type = var.storage_account_type
 
   short_term_retention_policy {
     retention_days = var.short_term_retention_days

@@ -134,11 +134,11 @@ resource "azurerm_application_gateway" "this" {
   }
 
   backend_http_settings {
-    name                  = "default-https-setting"
-    cookie_based_affinity = "Disabled"
-    port                  = 443
-    protocol              = "Https"
-    request_timeout       = 30
+    name                                = "default-https-setting"
+    cookie_based_affinity               = "Disabled"
+    port                                = 443
+    protocol                            = "Https"
+    request_timeout                     = 30
     pick_host_name_from_backend_address = true
 
     connection_draining {
@@ -200,10 +200,10 @@ resource "azurerm_application_gateway" "this" {
   tags = merge(
     var.tags,
     {
-      environment = var.prefix
+      environment     = var.prefix
       managed_by_agic = "true"
     }
-  )
+  }
 
   lifecycle {
     ignore_changes = [
