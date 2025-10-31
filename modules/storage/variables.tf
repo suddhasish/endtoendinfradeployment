@@ -145,10 +145,3 @@ variable "tags" {
   default     = {}
   description = "Tags for resources"
 }
-
-# Deprecated - keeping for backward compatibility
-variable "sku" {
-  type        = string
-  default     = "Standard_LRS"
-  description = "Deprecated - use account_tier and account_replication_type"
-}
