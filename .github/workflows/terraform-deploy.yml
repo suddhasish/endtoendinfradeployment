@@ -100,8 +100,13 @@ jobs:
             fi
             
             echo "should_deploy=true" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            # For PRs, run plan on DEV environment only
+            echo "environment=DEV" >> $GITHUB_OUTPUT
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            echo "allowed_environments=[]" >> $GITHUB_OUTPUT
           else
-            # For PRs and pushes, don't run plan automatically
+            # For pushes, don't run plan
             echo "environment=SKIP" >> $GITHUB_OUTPUT
             echo "should_deploy=false" >> $GITHUB_OUTPUT
             echo "allowed_environments=[]" >> $GITHUB_OUTPUT
