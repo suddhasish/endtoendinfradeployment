@@ -228,9 +228,47 @@ The repository includes a comprehensive GitHub Actions workflow:
 2. Select **Terraform CI/CD - Multi-Environment Deployment**
 3. Click **Run workflow**
 4. Select:
-   - Environment (dev/qa/stg/prod)
+   - Environment (dev/qa/stg/prod/all)
    - Action (plan/apply/destroy)
 5. Click **Run workflow**
+
+#### Destroy Infrastructure
+
+The workflow supports destroying infrastructure for cleanup or testing purposes:
+
+**Single Environment Destroy:**
+```
+1. Navigate to Actions → Terraform CI/CD workflow
+2. Click "Run workflow"
+3. Select environment: DEV, QA, STG, or PROD
+4. Select action: destroy
+5. Click "Run workflow"
+6. Approve the environment protection if required
+```
+
+**All Environments Destroy (Sequential):**
+```
+1. Navigate to Actions → Terraform CI/CD workflow
+2. Click "Run workflow"
+3. Select environment: all
+4. Select action: destroy
+5. Click "Run workflow"
+```
+
+⚠️ **Destroy Order for Safety:**
+- When destroying all environments, the workflow destroys in reverse order:
+  **PROD → STG → QA → DEV**
+- This ensures production is cleaned up first to minimize costs
+- Each environment requires manual approval via GitHub environment protection
+- Destroy plans are generated and uploaded as artifacts for review
+
+**Destroy Features:**
+- ✅ Generates destroy plan before execution
+- ✅ Uploads destroy plan artifacts for review
+- ✅ Requires manual approval (GitHub environment protection)
+- ✅ Provides detailed summary in GitHub Actions UI
+- ✅ Sequential destroy in reverse order for "all" environments
+- ✅ Safe rollback mechanism
 
 ### Branch Strategy
 
