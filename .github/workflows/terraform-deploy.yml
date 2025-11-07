@@ -579,8 +579,8 @@ jobs:
         working-directory: ./environments/${{ steps.env-path.outputs.path }}
         env:
           TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
-          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids }}
-          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
         run: |
           echo "🔥 DESTROYING ${{ needs.setup.outputs.environment }} environment..."
           terraform apply -auto-approve tfplan-destroy-${{ steps.env-path.outputs.path }}
@@ -765,7 +765,7 @@ jobs:
   destroy-prod:
     name: Destroy PROD
     runs-on: ubuntu-latest
-    needs: [terraform-plan, terraform-unit-tests]
+    needs: [setup, terraform-validate]
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy' && github.event.inputs.environment == 'all'
     environment:
       name: prod
@@ -789,8 +789,8 @@ jobs:
         working-directory: ./environments/prod
         env:
           TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
-          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids }}
-          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
         run: |
           echo "🔥 DESTROYING PROD environment..."
           terraform destroy -auto-approve -var-file=terraform.tfvars
@@ -823,8 +823,8 @@ jobs:
         working-directory: ./environments/stg
         env:
           TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
-          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids }}
-          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
         run: |
           echo "🔥 DESTROYING STG environment..."
           terraform destroy -auto-approve -var-file=terraform.tfvars
@@ -857,8 +857,8 @@ jobs:
         working-directory: ./environments/qa
         env:
           TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
-          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids }}
-          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
         run: |
           echo "🔥 DESTROYING QA environment..."
           terraform destroy -auto-approve -var-file=terraform.tfvars
@@ -891,8 +891,8 @@ jobs:
         working-directory: ./environments/dev
         env:
           TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
-          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids }}
-          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
         run: |
           echo "🔥 DESTROYING DEV environment..."
           terraform destroy -auto-approve -var-file=terraform.tfvars
