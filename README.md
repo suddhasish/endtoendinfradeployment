@@ -209,7 +209,22 @@ The repository includes a comprehensive CI/CD pipeline with:
 - ✅ **Multi-Environment Planning** (matrix strategy)
 - ✅ **Automated Testing** (Terratest)
 - ✅ **Controlled Deployment** (manual approval for prod)
+- ✅ **Infrastructure Destroy** (single or all environments)
 - ✅ **Post-Deployment Validation**
+
+### Manual Workflow Dispatch
+
+Trigger deployments or destroy operations manually via GitHub Actions:
+
+```
+Actions → Terraform CI/CD → Run workflow
+  - Environment: DEV, QA, STG, PROD, or all
+  - Action: plan, apply, or destroy
+```
+
+**Destroy Operations:**
+- Single environment: Destroys selected environment with manual approval
+- All environments: Sequential destroy (PROD → STG → QA → DEV) for safety
 
 ### Required GitHub Secrets
 

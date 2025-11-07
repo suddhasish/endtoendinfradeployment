@@ -481,6 +481,121 @@ jobs:
           name: terraform-outputs-${{ needs.setup.outputs.environment }}
           path: environments/${{ needs.setup.outputs.environment }}/outputs.json
 
+  terraform-destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+    needs: [setup, terraform-validate]
+    if: |
+      github.event_name == 'workflow_dispatch' && 
+      github.event.inputs.action == 'destroy' && 
+      github.event.inputs.environment != 'all'
+    environment: 
+      name: ${{ needs.setup.outputs.environment }}
+      url: https://portal.azure.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Set Environment Path
+        id: env-path
+        run: |
+          ENV_LOWER=$(echo "${{ needs.setup.outputs.environment }}" | tr '[:upper:]' '[:lower:]')
+          echo "path=$ENV_LOWER" >> $GITHUB_OUTPUT
+          echo "Environment folder: environments/$ENV_LOWER"
+
+      - name: Terraform Init
+        working-directory: ./environments/${{ steps.env-path.outputs.path }}
+        run: |
+          echo "Initializing Terraform for ${{ needs.setup.outputs.environment }}..."
+          terraform init \
+            -backend-config="resource_group_name=rg-tfstate-${{ steps.env-path.outputs.path }}" \
+            -backend-config="storage_account_name=sttfstatewaf${{ steps.env-path.outputs.path }}" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=${{ steps.env-path.outputs.path }}.terraform.tfstate" || {
+              echo "::error::Backend initialization failed. Make sure the storage account 'sttfstatewaf${{ steps.env-path.outputs.path }}' exists."
+              exit 1
+            }
+
+      - name: Terraform Plan Destroy
+        id: plan-destroy
+        working-directory: ./environments/${{ steps.env-path.outputs.path }}
+        env:
+          TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
+        run: |
+          echo "⚠️  DANGER: Planning destruction of ${{ needs.setup.outputs.environment }} environment..."
+          echo ""
+          
+          # Run destroy plan and capture output
+          set +e
+          terraform plan -destroy \
+            -var-file=terraform.tfvars \
+            -out=tfplan-destroy-${{ steps.env-path.outputs.path }} \
+            -no-color 2>&1 | tee plan-destroy-output.txt
+          PLAN_EXIT_CODE=$?
+          set -e
+
+          # Check if plan file was created
+          if [ ! -f "tfplan-destroy-${{ steps.env-path.outputs.path }}" ]; then
+            echo "::error::Destroy plan file was not created (exit code: $PLAN_EXIT_CODE)"
+            echo "::error::Plan output:"
+            cat plan-destroy-output.txt
+            exit 1
+          fi
+
+          echo "✅ Destroy plan file created successfully"
+          exit $PLAN_EXIT_CODE
+
+      - name: Generate Destroy Plan Summary
+        if: success()
+        working-directory: ./environments/${{ steps.env-path.outputs.path }}
+        run: |
+          terraform show -no-color tfplan-destroy-${{ steps.env-path.outputs.path }} > tfplan-destroy-${{ steps.env-path.outputs.path }}.txt
+          echo "## ⚠️ Terraform Destroy Plan - ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Action:** DESTROY" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Review the destroy plan carefully before proceeding with the destruction." >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload Destroy Plan Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-destroy-${{ steps.env-path.outputs.path }}
+          path: |
+            environments/${{ steps.env-path.outputs.path }}/tfplan-destroy-${{ steps.env-path.outputs.path }}
+            environments/${{ steps.env-path.outputs.path }}/tfplan-destroy-${{ steps.env-path.outputs.path }}.txt
+          retention-days: 30
+
+      - name: Terraform Destroy
+        working-directory: ./environments/${{ steps.env-path.outputs.path }}
+        env:
+          TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
+        run: |
+          echo "🔥 DESTROYING ${{ needs.setup.outputs.environment }} environment..."
+          terraform apply -auto-approve tfplan-destroy-${{ steps.env-path.outputs.path }}
+          echo "✅ ${{ needs.setup.outputs.environment }} environment destroyed successfully"
+
+      - name: Destroy Completion Summary
+        if: success()
+        run: |
+          echo "## 🔥 Destruction Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ✅ Successfully destroyed" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Destroyed by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+
   # Sequential Deployment: DEV -> QA -> STG -> PROD
   apply-dev:
     name: Apply DEV
@@ -646,6 +761,143 @@ jobs:
           name: terraform-outputs-prod
           path: environments/prod/outputs.json
 
+  # Sequential Destroy: PROD -> STG -> QA -> DEV (reverse order for safety)
+  destroy-prod:
+    name: Destroy PROD
+    runs-on: ubuntu-latest
+    needs: [setup, terraform-validate]
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy' && github.event.inputs.environment == 'all'
+    environment:
+      name: prod
+      url: https://portal.azure.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - name: Terraform Init
+        working-directory: ./environments/prod
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=rg-tfstate-prod" \
+            -backend-config="storage_account_name=sttfstatewafprod" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=prod.terraform.tfstate"
+      - name: Terraform Destroy
+        working-directory: ./environments/prod
+        env:
+          TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
+        run: |
+          echo "🔥 DESTROYING PROD environment..."
+          terraform destroy -auto-approve -var-file=terraform.tfvars
+          echo "✅ PROD environment destroyed"
+
+  destroy-stg:
+    name: Destroy STG
+    runs-on: ubuntu-latest
+    needs: destroy-prod
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy' && github.event.inputs.environment == 'all'
+    environment:
+      name: stg
+      url: https://portal.azure.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - name: Terraform Init
+        working-directory: ./environments/stg
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=rg-tfstate-stg" \
+            -backend-config="storage_account_name=sttfstatewafstg" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=stg.terraform.tfstate"
+      - name: Terraform Destroy
+        working-directory: ./environments/stg
+        env:
+          TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
+        run: |
+          echo "🔥 DESTROYING STG environment..."
+          terraform destroy -auto-approve -var-file=terraform.tfvars
+          echo "✅ STG environment destroyed"
+
+  destroy-qa:
+    name: Destroy QA
+    runs-on: ubuntu-latest
+    needs: destroy-stg
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy' && github.event.inputs.environment == 'all'
+    environment:
+      name: qa
+      url: https://portal.azure.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - name: Terraform Init
+        working-directory: ./environments/qa
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=rg-tfstate-qa" \
+            -backend-config="storage_account_name=sttfstatewafqa" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=qa.terraform.tfstate"
+      - name: Terraform Destroy
+        working-directory: ./environments/qa
+        env:
+          TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
+        run: |
+          echo "🔥 DESTROYING QA environment..."
+          terraform destroy -auto-approve -var-file=terraform.tfvars
+          echo "✅ QA environment destroyed"
+
+  destroy-dev:
+    name: Destroy DEV
+    runs-on: ubuntu-latest
+    needs: destroy-qa
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'destroy' && github.event.inputs.environment == 'all'
+    environment:
+      name: dev
+      url: https://portal.azure.com
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - name: Terraform Init
+        working-directory: ./environments/dev
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=rg-tfstate-dev" \
+            -backend-config="storage_account_name=sttfstatewafdev" \
+            -backend-config="container_name=tfstate" \
+            -backend-config="key=dev.terraform.tfstate"
+      - name: Terraform Destroy
+        working-directory: ./environments/dev
+        env:
+          TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
+        run: |
+          echo "🔥 DESTROYING DEV environment..."
+          terraform destroy -auto-approve -var-file=terraform.tfvars
+          echo "✅ DEV environment destroyed"
+
   post-deployment-validation:
     name: Post-Deployment Validation
     runs-on: ubuntu-latest
@@ -687,16 +939,44 @@ jobs:
           echo "- Environment: ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
           echo "- Timestamp: $(date)" >> $GITHUB_STEP_SUMMARY
 
+  post-destroy-validation:
+    name: Post-Destroy Validation
+    runs-on: ubuntu-latest
+    needs: [setup, terraform-destroy, destroy-dev, destroy-qa, destroy-stg, destroy-prod]
+    if: |
+      always() && 
+      (needs.terraform-destroy.result == 'success' || 
+       needs.destroy-dev.result == 'success')
+    steps:
+      - name: Destroy Completion Summary
+        run: |
+          echo "## 🔥 Infrastructure Destroyed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.destroy-dev.result }}" == "success" ]; then
+            echo "### Sequential Destroy Completed (PROD→STG→QA→DEV)" >> $GITHUB_STEP_SUMMARY
+            echo "- PROD: ${{ needs.destroy-prod.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- STG: ${{ needs.destroy-stg.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- QA: ${{ needs.destroy-qa.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- DEV: ${{ needs.destroy-dev.result }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Single Environment Destroy" >> $GITHUB_STEP_SUMMARY
+            echo "- Environment: ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Status: ✅ Destroyed successfully" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Destroyed by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date)" >> $GITHUB_STEP_SUMMARY
+
   notify:
     name: Notify Deployment Status
     runs-on: ubuntu-latest
-    needs: [setup, terraform-apply, apply-dev, apply-qa, apply-stg, apply-prod]
+    needs: [setup, terraform-apply, terraform-destroy, apply-dev, apply-qa, apply-stg, apply-prod, destroy-dev, destroy-qa, destroy-stg, destroy-prod]
     if: always()
     steps:
       - name: Determine Status
         id: status
         run: |
-          if [ "${{ needs.terraform-apply.result }}" == "success" ] || [ "${{ needs.apply-prod.result }}" == "success" ]; then
+          if [ "${{ needs.terraform-apply.result }}" == "success" ] || [ "${{ needs.apply-prod.result }}" == "success" ] || [ "${{ needs.terraform-destroy.result }}" == "success" ] || [ "${{ needs.destroy-dev.result }}" == "success" ]; then
             echo "status=✅ Success" >> $GITHUB_OUTPUT
             echo "color=28a745" >> $GITHUB_OUTPUT
           else
@@ -708,7 +988,17 @@ jobs:
         run: |
           echo "## Deployment Status: ${{ steps.status.outputs.status }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ github.event.inputs.environment }}" == "all" ]; then
+          if [ "${{ github.event.inputs.action }}" == "destroy" ] && [ "${{ github.event.inputs.environment }}" == "all" ]; then
+            echo "### Sequential Destroy (PROD→STG→QA→DEV)" >> $GITHUB_STEP_SUMMARY
+            echo "- PROD: ${{ needs.destroy-prod.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- STG: ${{ needs.destroy-stg.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- QA: ${{ needs.destroy-qa.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- DEV: ${{ needs.destroy-dev.result }}" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            echo "### Single Environment Destroy" >> $GITHUB_STEP_SUMMARY
+            echo "- Environment: ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Status: ${{ needs.terraform-destroy.result }}" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ github.event.inputs.environment }}" == "all" ]; then
             echo "### Sequential Deployment (DEV→QA→STG→PROD)" >> $GITHUB_STEP_SUMMARY
             echo "- DEV: ${{ needs.apply-dev.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- QA: ${{ needs.apply-qa.result }}" >> $GITHUB_STEP_SUMMARY
