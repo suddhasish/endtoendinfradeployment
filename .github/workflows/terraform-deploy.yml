@@ -901,13 +901,11 @@ jobs:
   post-deployment-validation:
     name: Post-Deployment Validation
     runs-on: ubuntu-latest
-    needs: [setup, terraform-apply, terraform-destroy, apply-dev, apply-qa, apply-stg, apply-prod, destroy-dev, destroy-qa, destroy-stg, destroy-prod]
+    needs: [setup, terraform-apply, apply-dev, apply-qa, apply-stg, apply-prod]
     if: |
       always() && 
       (needs.terraform-apply.result == 'success' || 
-       needs.apply-prod.result == 'success' ||
-       needs.terraform-destroy.result == 'success' ||
-       needs.destroy-dev.result == 'success')
+       needs.apply-prod.result == 'success')
     steps:
       - uses: actions/checkout@v4
 
@@ -940,6 +938,34 @@ jobs:
           echo "✅ Infrastructure deployed successfully" >> $GITHUB_STEP_SUMMARY
           echo "- Environment: ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
           echo "- Timestamp: $(date)" >> $GITHUB_STEP_SUMMARY
+
+  post-destroy-validation:
+    name: Post-Destroy Validation
+    runs-on: ubuntu-latest
+    needs: [setup, terraform-destroy, destroy-dev, destroy-qa, destroy-stg, destroy-prod]
+    if: |
+      always() && 
+      (needs.terraform-destroy.result == 'success' || 
+       needs.destroy-dev.result == 'success')
+    steps:
+      - name: Destroy Completion Summary
+        run: |
+          echo "## 🔥 Infrastructure Destroyed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.destroy-dev.result }}" == "success" ]; then
+            echo "### Sequential Destroy Completed (PROD→STG→QA→DEV)" >> $GITHUB_STEP_SUMMARY
+            echo "- PROD: ${{ needs.destroy-prod.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- STG: ${{ needs.destroy-stg.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- QA: ${{ needs.destroy-qa.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- DEV: ${{ needs.destroy-dev.result }}" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Single Environment Destroy" >> $GITHUB_STEP_SUMMARY
+            echo "- Environment: ${{ needs.setup.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Status: ✅ Destroyed successfully" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Destroyed by:** @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date)" >> $GITHUB_STEP_SUMMARY
 
   notify:
     name: Notify Deployment Status
