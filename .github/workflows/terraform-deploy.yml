@@ -526,27 +526,16 @@ jobs:
         working-directory: ./environments/${{ steps.env-path.outputs.path }}
         env:
           TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids != '' && secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids != '' && secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
         run: |
           echo "⚠️  DANGER: Planning destruction of ${{ needs.setup.outputs.environment }} environment..."
           echo ""
-          
-          # Sanitize and validate list variables
-          AKS_ADMIN_IDS='${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}'
-          KEYVAULT_ADMIN_IDS='${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}'
-          
-          # Remove any leading/trailing whitespace while preserving internal structure
-          AKS_ADMIN_IDS="${AKS_ADMIN_IDS#"${AKS_ADMIN_IDS%%[![:space:]]*}"}"
-          AKS_ADMIN_IDS="${AKS_ADMIN_IDS%"${AKS_ADMIN_IDS##*[![:space:]]}"}"
-          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS#"${KEYVAULT_ADMIN_IDS%%[![:space:]]*}"}"
-          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS%"${KEYVAULT_ADMIN_IDS##*[![:space:]]}"}"
-          
-          # Set as environment variables for Terraform
-          export TF_VAR_aks_admin_group_object_ids="$AKS_ADMIN_IDS"
-          export TF_VAR_keyvault_admin_object_ids="$KEYVAULT_ADMIN_IDS"
-          
-          echo "Using AKS admin IDs: $TF_VAR_aks_admin_group_object_ids"
-          echo "Using Key Vault admin IDs: $TF_VAR_keyvault_admin_object_ids"
-          
+
+          # Validate JSON list variables to prevent Terraform parsing errors
+          echo "$TF_VAR_aks_admin_group_object_ids" | jq -e 'type=="array"' >/dev/null || { echo "::error::TF_VAR_aks_admin_group_object_ids must be a JSON array like [\"id1\",\"id2\"]"; exit 1; }
+          echo "$TF_VAR_keyvault_admin_object_ids" | jq -e 'type=="array"' >/dev/null || { echo "::error::TF_VAR_keyvault_admin_object_ids must be a JSON array like [\"id1\",\"id2\"]"; exit 1; }
+
           # Run destroy plan and capture output
           set +e
           terraform plan -destroy \
@@ -594,21 +583,13 @@ jobs:
         working-directory: ./environments/${{ steps.env-path.outputs.path }}
         env:
           TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
+          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids != '' && secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
+          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids != '' && secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
         run: |
-          # Sanitize and validate list variables
-          AKS_ADMIN_IDS='${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}'
-          KEYVAULT_ADMIN_IDS='${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}'
-          
-          # Remove any leading/trailing whitespace while preserving internal structure
-          AKS_ADMIN_IDS="${AKS_ADMIN_IDS#"${AKS_ADMIN_IDS%%[![:space:]]*}"}"
-          AKS_ADMIN_IDS="${AKS_ADMIN_IDS%"${AKS_ADMIN_IDS##*[![:space:]]}"}"
-          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS#"${KEYVAULT_ADMIN_IDS%%[![:space:]]*}"}"
-          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS%"${KEYVAULT_ADMIN_IDS##*[![:space:]]}"}"
-          
-          # Set as environment variables for Terraform
-          export TF_VAR_aks_admin_group_object_ids="$AKS_ADMIN_IDS"
-          export TF_VAR_keyvault_admin_object_ids="$KEYVAULT_ADMIN_IDS"
-          
+          # Validate JSON list variables
+          echo "$TF_VAR_aks_admin_group_object_ids" | jq -e 'type=="array"' >/dev/null || { echo "::error::Invalid TF_VAR_aks_admin_group_object_ids"; exit 1; }
+          echo "$TF_VAR_keyvault_admin_object_ids" | jq -e 'type=="array"' >/dev/null || { echo "::error::Invalid TF_VAR_keyvault_admin_object_ids"; exit 1; }
+
           echo "🔥 DESTROYING ${{ needs.setup.outputs.environment }} environment..."
           terraform apply -auto-approve tfplan-destroy-${{ steps.env-path.outputs.path }}
           echo "✅ ${{ needs.setup.outputs.environment }} environment destroyed successfully"
