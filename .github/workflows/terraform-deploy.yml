@@ -526,11 +526,26 @@ jobs:
         working-directory: ./environments/${{ steps.env-path.outputs.path }}
         env:
           TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
-          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
-          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
         run: |
           echo "⚠️  DANGER: Planning destruction of ${{ needs.setup.outputs.environment }} environment..."
           echo ""
+          
+          # Sanitize and validate list variables
+          AKS_ADMIN_IDS='${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}'
+          KEYVAULT_ADMIN_IDS='${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}'
+          
+          # Remove any leading/trailing whitespace while preserving internal structure
+          AKS_ADMIN_IDS="${AKS_ADMIN_IDS#"${AKS_ADMIN_IDS%%[![:space:]]*}"}"
+          AKS_ADMIN_IDS="${AKS_ADMIN_IDS%"${AKS_ADMIN_IDS##*[![:space:]]}"}"
+          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS#"${KEYVAULT_ADMIN_IDS%%[![:space:]]*}"}"
+          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS%"${KEYVAULT_ADMIN_IDS##*[![:space:]]}"}"
+          
+          # Set as environment variables for Terraform
+          export TF_VAR_aks_admin_group_object_ids="$AKS_ADMIN_IDS"
+          export TF_VAR_keyvault_admin_object_ids="$KEYVAULT_ADMIN_IDS"
+          
+          echo "Using AKS admin IDs: $TF_VAR_aks_admin_group_object_ids"
+          echo "Using Key Vault admin IDs: $TF_VAR_keyvault_admin_object_ids"
           
           # Run destroy plan and capture output
           set +e
@@ -579,9 +594,21 @@ jobs:
         working-directory: ./environments/${{ steps.env-path.outputs.path }}
         env:
           TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
-          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
-          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
         run: |
+          # Sanitize and validate list variables
+          AKS_ADMIN_IDS='${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}'
+          KEYVAULT_ADMIN_IDS='${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}'
+          
+          # Remove any leading/trailing whitespace while preserving internal structure
+          AKS_ADMIN_IDS="${AKS_ADMIN_IDS#"${AKS_ADMIN_IDS%%[![:space:]]*}"}"
+          AKS_ADMIN_IDS="${AKS_ADMIN_IDS%"${AKS_ADMIN_IDS##*[![:space:]]}"}"
+          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS#"${KEYVAULT_ADMIN_IDS%%[![:space:]]*}"}"
+          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS%"${KEYVAULT_ADMIN_IDS##*[![:space:]]}"}"
+          
+          # Set as environment variables for Terraform
+          export TF_VAR_aks_admin_group_object_ids="$AKS_ADMIN_IDS"
+          export TF_VAR_keyvault_admin_object_ids="$KEYVAULT_ADMIN_IDS"
+          
           echo "🔥 DESTROYING ${{ needs.setup.outputs.environment }} environment..."
           terraform apply -auto-approve tfplan-destroy-${{ steps.env-path.outputs.path }}
           echo "✅ ${{ needs.setup.outputs.environment }} environment destroyed successfully"
@@ -789,9 +816,21 @@ jobs:
         working-directory: ./environments/prod
         env:
           TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
-          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
-          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
         run: |
+          # Sanitize and validate list variables
+          AKS_ADMIN_IDS='${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}'
+          KEYVAULT_ADMIN_IDS='${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}'
+          
+          # Remove any leading/trailing whitespace while preserving internal structure
+          AKS_ADMIN_IDS="${AKS_ADMIN_IDS#"${AKS_ADMIN_IDS%%[![:space:]]*}"}"
+          AKS_ADMIN_IDS="${AKS_ADMIN_IDS%"${AKS_ADMIN_IDS##*[![:space:]]}"}"
+          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS#"${KEYVAULT_ADMIN_IDS%%[![:space:]]*}"}"
+          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS%"${KEYVAULT_ADMIN_IDS##*[![:space:]]}"}"
+          
+          # Set as environment variables for Terraform
+          export TF_VAR_aks_admin_group_object_ids="$AKS_ADMIN_IDS"
+          export TF_VAR_keyvault_admin_object_ids="$KEYVAULT_ADMIN_IDS"
+          
           echo "🔥 DESTROYING PROD environment..."
           terraform destroy -auto-approve -var-file=terraform.tfvars
           echo "✅ PROD environment destroyed"
@@ -823,9 +862,21 @@ jobs:
         working-directory: ./environments/stg
         env:
           TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
-          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
-          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
         run: |
+          # Sanitize and validate list variables
+          AKS_ADMIN_IDS='${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}'
+          KEYVAULT_ADMIN_IDS='${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}'
+          
+          # Remove any leading/trailing whitespace while preserving internal structure
+          AKS_ADMIN_IDS="${AKS_ADMIN_IDS#"${AKS_ADMIN_IDS%%[![:space:]]*}"}"
+          AKS_ADMIN_IDS="${AKS_ADMIN_IDS%"${AKS_ADMIN_IDS##*[![:space:]]}"}"
+          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS#"${KEYVAULT_ADMIN_IDS%%[![:space:]]*}"}"
+          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS%"${KEYVAULT_ADMIN_IDS##*[![:space:]]}"}"
+          
+          # Set as environment variables for Terraform
+          export TF_VAR_aks_admin_group_object_ids="$AKS_ADMIN_IDS"
+          export TF_VAR_keyvault_admin_object_ids="$KEYVAULT_ADMIN_IDS"
+          
           echo "🔥 DESTROYING STG environment..."
           terraform destroy -auto-approve -var-file=terraform.tfvars
           echo "✅ STG environment destroyed"
@@ -857,9 +908,21 @@ jobs:
         working-directory: ./environments/qa
         env:
           TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
-          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
-          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
         run: |
+          # Sanitize and validate list variables
+          AKS_ADMIN_IDS='${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}'
+          KEYVAULT_ADMIN_IDS='${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}'
+          
+          # Remove any leading/trailing whitespace while preserving internal structure
+          AKS_ADMIN_IDS="${AKS_ADMIN_IDS#"${AKS_ADMIN_IDS%%[![:space:]]*}"}"
+          AKS_ADMIN_IDS="${AKS_ADMIN_IDS%"${AKS_ADMIN_IDS##*[![:space:]]}"}"
+          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS#"${KEYVAULT_ADMIN_IDS%%[![:space:]]*}"}"
+          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS%"${KEYVAULT_ADMIN_IDS##*[![:space:]]}"}"
+          
+          # Set as environment variables for Terraform
+          export TF_VAR_aks_admin_group_object_ids="$AKS_ADMIN_IDS"
+          export TF_VAR_keyvault_admin_object_ids="$KEYVAULT_ADMIN_IDS"
+          
           echo "🔥 DESTROYING QA environment..."
           terraform destroy -auto-approve -var-file=terraform.tfvars
           echo "✅ QA environment destroyed"
@@ -891,9 +954,21 @@ jobs:
         working-directory: ./environments/dev
         env:
           TF_VAR_sql_administrator_password: ${{ secrets.TF_VAR_sql_administrator_password }}
-          TF_VAR_aks_admin_group_object_ids: ${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}
-          TF_VAR_keyvault_admin_object_ids: ${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}
         run: |
+          # Sanitize and validate list variables
+          AKS_ADMIN_IDS='${{ secrets.TF_VAR_aks_admin_group_object_ids || '[]' }}'
+          KEYVAULT_ADMIN_IDS='${{ secrets.TF_VAR_keyvault_admin_object_ids || '[]' }}'
+          
+          # Remove any leading/trailing whitespace while preserving internal structure
+          AKS_ADMIN_IDS="${AKS_ADMIN_IDS#"${AKS_ADMIN_IDS%%[![:space:]]*}"}"
+          AKS_ADMIN_IDS="${AKS_ADMIN_IDS%"${AKS_ADMIN_IDS##*[![:space:]]}"}"
+          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS#"${KEYVAULT_ADMIN_IDS%%[![:space:]]*}"}"
+          KEYVAULT_ADMIN_IDS="${KEYVAULT_ADMIN_IDS%"${KEYVAULT_ADMIN_IDS##*[![:space:]]}"}"
+          
+          # Set as environment variables for Terraform
+          export TF_VAR_aks_admin_group_object_ids="$AKS_ADMIN_IDS"
+          export TF_VAR_keyvault_admin_object_ids="$KEYVAULT_ADMIN_IDS"
+          
           echo "🔥 DESTROYING DEV environment..."
           terraform destroy -auto-approve -var-file=terraform.tfvars
           echo "✅ DEV environment destroyed"
