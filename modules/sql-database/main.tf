@@ -116,7 +116,7 @@ resource "azurerm_mssql_server_vulnerability_assessment" "main" {
 
 # Private Endpoint
 resource "azurerm_private_endpoint" "sql" {
-  count = var.private_endpoint_subnet_id != null ? 1 : 0
+  count = length([var.private_endpoint_subnet_id]) > 0 ? 1 : 0
 
   name                = "pe-${azurerm_mssql_server.main.name}"
   location            = var.location
@@ -140,7 +140,7 @@ resource "azurerm_private_endpoint" "sql" {
 
 # Store SQL Admin Password in Key Vault
 resource "azurerm_key_vault_secret" "sql_admin_password" {
-  count = var.key_vault_id != null ? 1 : 0
+  count = length([var.key_vault_id]) > 0 ? 1 : 0
 
   name         = "sql-admin-password-${var.prefix}"
   value        = coalesce(var.administrator_password, random_password.sql_admin.result)
@@ -151,7 +151,7 @@ resource "azurerm_key_vault_secret" "sql_admin_password" {
 
 # Diagnostic Settings
 resource "azurerm_monitor_diagnostic_setting" "sql_server" {
-  count = var.log_analytics_workspace_id != null ? 1 : 0
+  count = length([var.log_analytics_workspace_id]) > 0 ? 1 : 0
 
   name                       = "diag-${azurerm_mssql_server.main.name}"
   target_resource_id         = azurerm_mssql_server.main.id
@@ -172,7 +172,7 @@ resource "azurerm_monitor_diagnostic_setting" "sql_server" {
 }
 
 resource "azurerm_monitor_diagnostic_setting" "sql_database" {
-  count = var.log_analytics_workspace_id != null ? 1 : 0
+  count = length([var.log_analytics_workspace_id]) > 0 ? 1 : 0
 
   name                       = "diag-${azurerm_mssql_database.main.name}"
   target_resource_id         = azurerm_mssql_database.main.id
